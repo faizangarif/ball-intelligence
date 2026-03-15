@@ -1,45 +1,69 @@
 import { NextResponse } from 'next/server';
-import { runAllAgents } from '@/lib/services/agents';
+import { runScoreKeeper, runLiveMonitor } from '@/lib/services/agents';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-// Cron job handler — called by Vercel Cron or manually
-export async function GET(request: Request) {
-  // Verify cron secret if set (security for production)
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+// Fast cron: ESPN scores + live monitor only (completes in <5s)
+export async function GET() {
   try {
-    const result = await runAllAgents(false);
+    const [scores, liveMonitor] = await Promise.all([
+      runScoreKeeper(),
+      runLiveMonitor(),
+    ]);
+
     return NextResponse.json({
       success: true,
-      ...result,
+      timestamp: new Date().toISOString(),
+      scores,
+      liveMonitor,
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: String(error) },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }
 }
 
-// Force full refresh (manual trigger)
+// POST: Trigger one specific agent at a time
 export async function POST(request: Request) {
   try {
-    const result = await runAllAgents(true);
+    const body = await request.json().catch(() => ({ agent: 'scores' }));
+    const agent = body.agent || 'scores';
+
+    let result;
+
+    switch (agent) {
+      case 'scores':
+        result = await runScoreKeeper();
+        break;
+      case 'standings': {
+        const { runStandingsAgent } = await import('@/lib/services/agents');
+        result = await runStandingsAgent();
+        break;
+      }
+      case 'players': {
+        const { runPlayerStatsAgent } = await import('@/lib/services/agents');
+        result = await runPlayerStatsAgent();
+        break;
+      }
+      case 'news': {
+        const { runNewsAgent } = await import('@/lib/services/agents');
+        result = await runNewsAgent();
+        break;
+      }
+      case 'monitor':
+        result = await runLiveMonitor();
+        break;
+      default:
+        result = await runScoreKeeper();
+    }
+
     return NextResponse.json({
       success: true,
-      forced: true,
-      ...result,
+      agent,
+      timestamp: new Date().toISOString(),
+      result,
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: String(error) },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }
 }

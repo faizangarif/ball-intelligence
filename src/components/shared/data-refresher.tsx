@@ -4,8 +4,8 @@ import { useEffect, useRef } from 'react';
 
 /**
  * Silent background data refresher.
- * Hits /api/cron periodically to keep server-side caches fresh.
- * Runs every 6 hours for full data, and checks scores more frequently.
+ * On first visit: refreshes scores, then kicks off standings/players/news sequentially.
+ * Every 6 hours: repeats the full cycle.
  */
 export function DataRefresher() {
   const hasRun = useRef(false);
@@ -14,20 +14,26 @@ export function DataRefresher() {
     if (hasRun.current) return;
     hasRun.current = true;
 
-    // On first page load, trigger a background data check
-    fetch('/api/cron').catch(() => {});
+    async function refreshAll() {
+      // Fast: ESPN scores (always works)
+      await fetch('/api/cron').catch(() => {});
 
-    // Set up periodic full refresh every 6 hours
-    const fullRefreshInterval = setInterval(
-      () => {
-        fetch('/api/cron', { method: 'POST' }).catch(() => {});
-      },
-      6 * 60 * 60 * 1000
-    );
+      // Slow agents one at a time to stay under timeout
+      for (const agent of ['standings', 'players', 'news']) {
+        await fetch('/api/cron', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent }),
+        }).catch(() => {});
+      }
+    }
 
-    return () => clearInterval(fullRefreshInterval);
+    refreshAll();
+
+    // Repeat every 6 hours
+    const interval = setInterval(refreshAll, 6 * 60 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Invisible component
   return null;
 }
