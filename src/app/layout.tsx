@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { Providers } from './providers';
+import { DataRefresher } from '@/components/shared/data-refresher';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="min-h-screen pt-16 pb-20 md:pb-0">{children}</main>
           <Footer />
           <MobileNav />
+          <DataRefresher />
         </Providers>
       </body>
     </html>
