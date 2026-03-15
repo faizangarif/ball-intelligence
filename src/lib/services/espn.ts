@@ -175,8 +175,7 @@ export async function fetchESPNScoreboard(league: 'NBA' | 'NFL'): Promise<Game[]
   const url = league === 'NBA' ? NBA_SCOREBOARD : NFL_SCOREBOARD;
   try {
     const res = await fetch(url, {
-      cache: 'no-store',
-      headers: { 'User-Agent': 'BallIntelligence/1.0' },
+      next: { revalidate: 10 },
     });
     if (!res.ok) return [];
     const data = await res.json();

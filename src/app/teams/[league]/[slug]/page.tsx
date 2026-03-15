@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from 'next/navigation';
 import { getTeams } from '@/lib/services/teams';
 import { getPlayers } from '@/lib/services/players';
@@ -12,15 +14,6 @@ import type { League } from '@/lib/types';
 
 interface PageProps {
   params: Promise<{ league: string; slug: string }>;
-}
-
-export async function generateStaticParams() {
-  // Use mock data for static generation to avoid API calls during build
-  const { mockTeams } = await import('@/lib/data/mock/teams');
-  return mockTeams.map((team) => ({
-    league: team.league.toLowerCase(),
-    slug: team.slug,
-  }));
 }
 
 export async function generateMetadata({ params }: PageProps) {
