@@ -11,15 +11,21 @@ interface StandingsTableProps {
 }
 
 const conferenceTabs = [
-  { label: 'AFC', value: 'AFC' },
-  { label: 'NFC', value: 'NFC' },
+  { label: 'AFC', value: 'American' },
+  { label: 'NFC', value: 'National' },
 ];
 
+function matchConference(teamConf: string, filter: string): boolean {
+  const c = teamConf.toLowerCase();
+  const f = filter.toLowerCase();
+  return c.includes(f) || c.includes(f === 'american' ? 'afc' : 'nfc');
+}
+
 export function NFLStandingsTable({ teams }: StandingsTableProps) {
-  const [conference, setConference] = useState('NFC');
+  const [conference, setConference] = useState('National');
 
   const filtered = teams
-    .filter((t) => t.conference.includes(conference))
+    .filter((t) => matchConference(t.conference, conference))
     .sort((a, b) => {
       const totalA = a.wins + a.losses + (a.ties || 0);
       const totalB = b.wins + b.losses + (b.ties || 0);
