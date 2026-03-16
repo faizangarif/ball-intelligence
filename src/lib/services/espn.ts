@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Game, Team, GameEvent } from '@/lib/types';
+import type { Game, Team, GameEvent, Player, StatLeader } from '@/lib/types';
 
 const NBA_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
 const NFL_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
@@ -280,4 +280,154 @@ export async function fetchESPNStandings(league: 'NBA' | 'NFL'): Promise<Team[]>
     console.error(`[espn] Failed to fetch ${league} standings:`, error);
     return [];
   }
+}
+
+// ============================================================
+// ESPN Stat Leaders — real current season leaders
+// ============================================================
+const LEADERS_URL = {
+  NBA: 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2026/types/2/leaders?limit=10',
+  NFL: 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/types/2/leaders?limit=10',
+};
+
+// Map ESPN stat names to our stat keys
+const ESPN_STAT_MAP: Record<string, string> = {
+  pointsPerGame: 'ppg',
+  reboundsPerGame: 'rpg',
+  assistsPerGame: 'apg',
+  stealsPerGame: 'spg',
+  blocksPerGame: 'bpg',
+  fieldGoalPercentage: 'fgPct',
+  threePointFieldGoalPercentage: 'threePct',
+  passingYards: 'passingYards',
+  passingTouchdowns: 'passingTDs',
+  rushingYards: 'rushingYards',
+  rushingTouchdowns: 'rushingTDs',
+  receivingYards: 'receivingYards',
+  receivingTouchdowns: 'receivingTDs',
+};
+
+async function resolveAthlete(ref: string): Promise<{ name: string; team: string; slug: string; position: string } | null> {
+  try {
+    const res = await fetch(ref, { next: { revalidate: 3600 } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const teamRef = data.team?.$ref || '';
+    let teamAbbr = '';
+    // Extract team ID from ref and resolve
+    const teamMatch = teamRef.match(/teams\/(\d+)/);
+    if (teamMatch) {
+      try {
+        const teamRes = await fetch(`https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/teams/${teamMatch[1]}`, { next: { revalidate: 3600 } });
+        if (teamRes.ok) {
+          const teamData = await teamRes.json();
+          teamAbbr = teamData.abbreviation || '';
+        }
+      } catch { /* ignore */ }
+    }
+    return {
+      name: data.displayName || data.fullName || '',
+      team: teamAbbr,
+      slug: slugify(data.displayName || ''),
+      position: data.position?.abbreviation || '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchESPNLeaders(league: 'NBA' | 'NFL'): Promise<Record<string, StatLeader[]>> {
+  const url = LEADERS_URL[league];
+  try {
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    if (!res.ok) return {};
+    const data = await res.json();
+
+    const result: Record<string, StatLeader[]> = {};
+    const categories = data.categories || [];
+
+    for (const cat of categories) {
+      const espnName = cat.name || '';
+      const ourKey = ESPN_STAT_MAP[espnName];
+      if (!ourKey) continue;
+
+      const leaders: StatLeader[] = [];
+      const entries = cat.leaders || [];
+
+      for (let i = 0; i < Math.min(entries.length, 10); i++) {
+        const entry = entries[i];
+        const athleteRef = entry.athlete?.$ref || '';
+        const value = parseFloat(entry.displayValue || entry.value || '0');
+
+        // Resolve athlete name
+        let name = 'Unknown';
+        let team = '';
+        let playerSlug = '';
+
+        if (athleteRef) {
+          const resolved = await resolveAthlete(athleteRef);
+          if (resolved) {
+            name = resolved.name;
+            team = resolved.team;
+            playerSlug = resolved.slug;
+          }
+        }
+
+        leaders.push({
+          rank: i + 1,
+          playerName: name,
+          playerSlug,
+          team,
+          value,
+        });
+      }
+
+      result[ourKey] = leaders;
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`[espn] Failed to fetch ${league} leaders:`, error);
+    return {};
+  }
+}
+
+// ============================================================
+// ESPN Top Players — build player list from standings roster data
+// ============================================================
+export async function fetchESPNPlayers(league: 'NBA' | 'NFL'): Promise<Player[]> {
+  // Get leaders for top player data
+  const leaders = await fetchESPNLeaders(league);
+  const playerMap = new Map<string, Player>();
+
+  const statKey = league === 'NBA' ? 'ppg' : 'passingYards';
+  const topLeaders = leaders[statKey] || [];
+
+  for (const leader of topLeaders) {
+    if (!leader.playerName || leader.playerName === 'Unknown') continue;
+    if (playerMap.has(leader.playerSlug)) continue;
+
+    const seasonStats: Record<string, number> = {};
+    // Fill in all stats for this player from all categories
+    for (const [key, catLeaders] of Object.entries(leaders)) {
+      const found = catLeaders.find((l) => l.playerSlug === leader.playerSlug);
+      if (found) seasonStats[key] = found.value;
+    }
+
+    playerMap.set(leader.playerSlug, {
+      id: leader.playerSlug,
+      name: leader.playerName,
+      slug: leader.playerSlug,
+      firstName: leader.playerName.split(' ')[0] || '',
+      lastName: leader.playerName.split(' ').slice(1).join(' ') || '',
+      teamId: leader.team.toLowerCase(),
+      league,
+      position: '',
+      featured: true,
+      trending: true,
+      seasonStats,
+    });
+  }
+
+  return Array.from(playerMap.values());
 }

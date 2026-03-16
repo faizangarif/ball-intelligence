@@ -1,16 +1,25 @@
-import { getCached } from '@/lib/services/cache';
+import { fetchESPNPlayers } from '@/lib/services/espn';
 import { mockPlayers } from '@/lib/data/mock/players';
 import type { Player, League } from '@/lib/types';
 
-// Read from cache (populated by agents) or fall back to mock data instantly
-function getAllPlayers(): Player[] {
-  const cachedNBA = getCached<Player[]>('nba-players');
-  const cachedNFL = getCached<Player[]>('nfl-players');
+async function getAllPlayers(): Promise<Player[]> {
+  try {
+    // Try ESPN for real current player data
+    const [nba, nfl] = await Promise.all([
+      fetchESPNPlayers('NBA').catch(() => []),
+      fetchESPNPlayers('NFL').catch(() => []),
+    ]);
 
-  const nba = cachedNBA && cachedNBA.length > 0 ? cachedNBA : mockPlayers.filter((p) => p.league === 'NBA');
-  const nfl = cachedNFL && cachedNFL.length > 0 ? cachedNFL : mockPlayers.filter((p) => p.league === 'NFL');
+    const espnPlayers = [...nba, ...nfl];
 
-  return [...nba, ...nfl];
+    // Merge: ESPN players override mock players with same slug, keep mock players ESPN doesn't have
+    const espnSlugs = new Set(espnPlayers.map((p) => p.slug));
+    const mockOnly = mockPlayers.filter((p) => !espnSlugs.has(p.slug));
+
+    return [...espnPlayers, ...mockOnly];
+  } catch {
+    return [...mockPlayers];
+  }
 }
 
 export async function getPlayers(filters?: {
@@ -19,7 +28,7 @@ export async function getPlayers(filters?: {
   featured?: boolean;
   trending?: boolean;
 }): Promise<Player[]> {
-  let result = getAllPlayers();
+  let result = await getAllPlayers();
   if (filters?.league) result = result.filter((p) => p.league === filters.league);
   if (filters?.teamId) result = result.filter((p) => p.teamId === filters.teamId);
   if (filters?.featured) result = result.filter((p) => p.featured);
@@ -28,11 +37,10 @@ export async function getPlayers(filters?: {
 }
 
 export async function getPlayer(slug: string): Promise<Player | null> {
-  const players = getAllPlayers();
+  const players = await getAllPlayers();
   const player = players.find((p) => p.slug === slug || p.id === slug);
   if (!player) return null;
 
-  // Attach team
   const { getTeam } = await import('./teams');
   const team = await getTeam(player.teamId);
   return { ...player, team: team ?? undefined };
@@ -41,13 +49,13 @@ export async function getPlayer(slug: string): Promise<Player | null> {
 export const getPlayerById = getPlayer;
 
 export async function getFeaturedPlayers(): Promise<Player[]> {
-  return getAllPlayers().filter((p) => p.featured);
+  return (await getAllPlayers()).filter((p) => p.featured);
 }
 
 export async function getTrendingPlayers(): Promise<Player[]> {
-  return getAllPlayers().filter((p) => p.trending);
+  return (await getAllPlayers()).filter((p) => p.trending);
 }
 
 export async function getPlayersByTeam(teamId: string): Promise<Player[]> {
-  return getAllPlayers().filter((p) => p.teamId === teamId);
+  return (await getAllPlayers()).filter((p) => p.teamId === teamId);
 }
