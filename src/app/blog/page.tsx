@@ -38,8 +38,8 @@ export default async function BlogPage({
     : articles.filter((a) => !a.featured);
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
         <div className="mb-12 text-center">
           <div className="mb-4 inline-flex items-center gap-3 rounded-full border border-[#2a2a3a] bg-[#111118] px-5 py-2">

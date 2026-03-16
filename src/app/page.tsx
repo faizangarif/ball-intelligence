@@ -66,7 +66,7 @@ export default async function HomePage() {
     <div className="space-y-0">
       <HeroSection featuredGame={featuredGame} liveGameCount={liveGames.length} />
 
-      <div className="max-w-7xl mx-auto px-4 space-y-12 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 py-10">
         <LiveGamesStrip games={liveGames} />
 
         <FeaturedTeams

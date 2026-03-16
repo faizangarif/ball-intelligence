@@ -37,8 +37,8 @@ const buildItems = [
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-background px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
+    <main className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Page Header */}
         <motion.div className="mb-16 text-center" {...fadeIn}>
           <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-accent">
