@@ -15,6 +15,7 @@ const navLinks = [
   { href: '/shot-iq', label: 'Shot IQ' },
   { href: '/stats', label: 'Stats' },
   { href: '/blog', label: 'Blog' },
+  { href: '/about', label: 'About' },
 ];
 
 export function Header() {
