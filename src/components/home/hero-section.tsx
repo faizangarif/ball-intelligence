@@ -13,42 +13,61 @@ interface HeroSectionProps {
   liveGameCount: number;
 }
 
+const TEAM_LOGOS = [
+  // NBA
+  { abbr: 'BOS', color: '#007A33' }, { abbr: 'LAL', color: '#552583' },
+  { abbr: 'GSW', color: '#1D428A' }, { abbr: 'OKC', color: '#007AC1' },
+  { abbr: 'MIL', color: '#00471B' }, { abbr: 'DEN', color: '#0E2240' },
+  { abbr: 'NYK', color: '#006BB6' }, { abbr: 'CLE', color: '#860038' },
+  { abbr: 'MIA', color: '#98002E' }, { abbr: 'DAL', color: '#00538C' },
+  { abbr: 'PHX', color: '#1D1160' }, { abbr: 'MIN', color: '#0C2340' },
+  { abbr: 'DET', color: '#C8102E' }, { abbr: 'SAS', color: '#C4CED4' },
+  // NFL
+  { abbr: 'PHI', color: '#004C54' }, { abbr: 'KC', color: '#E31837' },
+  { abbr: 'BUF', color: '#00338D' }, { abbr: 'BAL', color: '#241773' },
+  { abbr: 'SF', color: '#AA0000' }, { abbr: 'GB', color: '#203731' },
+  { abbr: 'DET', color: '#0076B6' }, { abbr: 'SEA', color: '#002244' },
+  { abbr: 'DAL', color: '#003594' }, { abbr: 'NE', color: '#002244' },
+];
+
+// Deterministic pseudo-random based on index
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+}
+
 function Particles() {
+  const items = Array.from({ length: 28 }).map((_, i) => {
+    const logo = TEAM_LOGOS[i % TEAM_LOGOS.length];
+    return {
+      ...logo,
+      left: seededRandom(i * 7 + 1) * 100,
+      duration: 10 + seededRandom(i * 3 + 5) * 14,
+      delay: seededRandom(i * 11 + 2) * 16,
+      opacity: 0.08 + seededRandom(i * 5 + 9) * 0.14,
+      size: 10 + seededRandom(i * 2 + 3) * 10,
+    };
+  });
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-      {Array.from({ length: 24 }).map((_, i) => (
+      {items.map((item, i) => (
         <span
           key={i}
-          className="absolute w-1 h-1 rounded-full bg-accent opacity-0"
+          className="absolute flex items-center justify-center font-black select-none"
           style={{
-            left: `${Math.random() * 100}%`,
-            bottom: `-5%`,
-            animation: `floatUp ${6 + Math.random() * 8}s linear infinite`,
-            animationDelay: `${Math.random() * 10}s`,
-            opacity: 0.15 + Math.random() * 0.35,
-            width: `${2 + Math.random() * 3}px`,
-            height: `${2 + Math.random() * 3}px`,
+            left: `${item.left}%`,
+            bottom: '-5%',
+            animation: `floatUp ${item.duration}s linear infinite`,
+            animationDelay: `${item.delay}s`,
+            opacity: item.opacity,
+            fontSize: `${item.size}px`,
+            color: item.color,
           }}
-        />
+        >
+          {item.abbr}
+        </span>
       ))}
-      <style jsx>{`
-        @keyframes floatUp {
-          0% {
-            transform: translateY(0) scale(1);
-            opacity: 0;
-          }
-          10% {
-            opacity: var(--tw-opacity, 0.3);
-          }
-          90% {
-            opacity: var(--tw-opacity, 0.3);
-          }
-          100% {
-            transform: translateY(-100vh) scale(0.5);
-            opacity: 0;
-          }
-        }
-      `}</style>
     </div>
   );
 }
