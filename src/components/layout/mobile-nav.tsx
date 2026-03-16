@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BasketballIcon, FootballIcon } from '@/components/ui/sport-icons';
+import { SoccerIcon } from '@/components/ui/soccer-icon';
 
 const mainTabs = [
   { href: '/', label: 'Home', icon: House },
@@ -26,6 +27,7 @@ const mainTabs = [
 ];
 
 const moreLinks = [
+  { href: '/soccer', label: 'Soccer', icon: SoccerIcon },
   { href: '/shot-iq', label: 'Shot IQ', icon: Target },
   { href: '/stats', label: 'Stats', icon: BarChart3 },
   { href: '/blog', label: 'Blog', icon: Newspaper },

@@ -11,6 +11,7 @@ import { LiveIndicator } from '@/components/ui/live-indicator';
 const navLinks = [
   { href: '/nba', label: 'NBA' },
   { href: '/nfl', label: 'NFL' },
+  { href: '/soccer', label: 'Soccer' },
   { href: '/live', label: 'Live', isLive: true },
   { href: '/shot-iq', label: 'Shot IQ' },
   { href: '/stats', label: 'Stats' },
