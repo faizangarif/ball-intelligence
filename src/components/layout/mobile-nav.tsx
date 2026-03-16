@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   House,
-  CircleDot,
-  Trophy,
   Radio,
   MoreHorizontal,
   X,
@@ -18,11 +16,12 @@ import {
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BasketballIcon, FootballIcon } from '@/components/ui/sport-icons';
 
 const mainTabs = [
   { href: '/', label: 'Home', icon: House },
-  { href: '/nba', label: 'NBA', icon: CircleDot },
-  { href: '/nfl', label: 'NFL', icon: Trophy },
+  { href: '/nba', label: 'NBA', icon: BasketballIcon },
+  { href: '/nfl', label: 'NFL', icon: FootballIcon },
   { href: '/live', label: 'Live', icon: Radio, isLive: true },
 ];
 
