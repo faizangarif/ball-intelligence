@@ -5,6 +5,17 @@ import type { ShotEntry } from '@/lib/types';
  * Uses trigonometric functions seeded by index to produce varied but
  * reproducible coordinates within the given bounding box.
  */
+// Simple hash to generate a unique seed per player
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 function generateZoneShots(
   playerId: string,
   zone: string,
@@ -24,11 +35,23 @@ function generateZoneShots(
   const distRange = distMax - distMin;
   const madeCount = Math.round(count * madeRatio);
 
+  // Unique seed per player+zone so every player has different shot patterns
+  const seed = hashString(playerId + zone);
+  const s1 = 2.1 + (seed % 37) * 0.13;
+  const s2 = 1.4 + (seed % 29) * 0.17;
+  const s3 = 0.8 + (seed % 43) * 0.11;
+  const p1 = (seed % 61) * 0.31;
+  const p2 = (seed % 53) * 0.27;
+  const p3 = (seed % 47) * 0.23;
+
   for (let i = 0; i < count; i++) {
-    // Deterministic pseudo-random spread using trig functions
-    const xOffset = ((Math.sin(i * 3.7 + 1.3) + 1) / 2) * xRange;
-    const yOffset = ((Math.cos(i * 2.9 + 0.7) + 1) / 2) * yRange;
-    const distOffset = ((Math.sin(i * 1.1 + 2.5) + 1) / 2) * distRange;
+    const xOffset = ((Math.sin(i * s1 + p1) + 1) / 2) * xRange;
+    const yOffset = ((Math.cos(i * s2 + p2) + 1) / 2) * yRange;
+    const distOffset = ((Math.sin(i * s3 + p3) + 1) / 2) * distRange;
+
+    // Shuffle made/missed based on player seed so it's not always first N made
+    const shotIndex = (i * (seed % 7 + 3) + seed) % count;
+    const isMade = shotIndex < madeCount;
 
     shots.push({
       id: `${playerId}-${zone.replace(/\s+/g, '-').toLowerCase()}-${i}`,
@@ -36,7 +59,7 @@ function generateZoneShots(
       zone,
       x: Math.round(xMin + xOffset),
       y: Math.round(yMin + yOffset),
-      made: i < madeCount,
+      made: isMade,
       shotType,
       distance: Math.round(distMin + distOffset),
     });
