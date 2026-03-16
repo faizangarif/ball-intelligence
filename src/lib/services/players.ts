@@ -1,17 +1,16 @@
-import { fetchNBAPlayers, fetchNFLPlayers } from '@/lib/services/web-data';
+import { getCached } from '@/lib/services/cache';
 import { mockPlayers } from '@/lib/data/mock/players';
-import { getTeams } from '@/lib/services/teams';
-import type { Player, League, Team } from '@/lib/types';
+import type { Player, League } from '@/lib/types';
 
-async function getAllPlayers(): Promise<Player[]> {
-  try {
-    const [nba, nfl] = await Promise.all([fetchNBAPlayers(), fetchNFLPlayers()]);
-    const players = [...nba, ...nfl];
-    if (players.length === 0) return [...mockPlayers];
-    return players;
-  } catch {
-    return [...mockPlayers];
-  }
+// Read from cache (populated by agents) or fall back to mock data instantly
+function getAllPlayers(): Player[] {
+  const cachedNBA = getCached<Player[]>('nba-players');
+  const cachedNFL = getCached<Player[]>('nfl-players');
+
+  const nba = cachedNBA && cachedNBA.length > 0 ? cachedNBA : mockPlayers.filter((p) => p.league === 'NBA');
+  const nfl = cachedNFL && cachedNFL.length > 0 ? cachedNFL : mockPlayers.filter((p) => p.league === 'NFL');
+
+  return [...nba, ...nfl];
 }
 
 export async function getPlayers(filters?: {
@@ -20,71 +19,35 @@ export async function getPlayers(filters?: {
   featured?: boolean;
   trending?: boolean;
 }): Promise<Player[]> {
-  try {
-    let result = await getAllPlayers();
-    if (filters?.league) result = result.filter((p) => p.league === filters.league);
-    if (filters?.teamId) result = result.filter((p) => p.teamId === filters.teamId);
-    if (filters?.featured) result = result.filter((p) => p.featured);
-    if (filters?.trending) result = result.filter((p) => p.trending);
-    return result;
-  } catch {
-    let result = [...mockPlayers];
-    if (filters?.league) result = result.filter((p) => p.league === filters.league);
-    if (filters?.teamId) result = result.filter((p) => p.teamId === filters.teamId);
-    if (filters?.featured) result = result.filter((p) => p.featured);
-    if (filters?.trending) result = result.filter((p) => p.trending);
-    return result;
-  }
+  let result = getAllPlayers();
+  if (filters?.league) result = result.filter((p) => p.league === filters.league);
+  if (filters?.teamId) result = result.filter((p) => p.teamId === filters.teamId);
+  if (filters?.featured) result = result.filter((p) => p.featured);
+  if (filters?.trending) result = result.filter((p) => p.trending);
+  return result;
 }
 
 export async function getPlayer(slug: string): Promise<Player | null> {
-  try {
-    const players = await getAllPlayers();
-    const player = players.find((p) => p.slug === slug || p.id === slug);
-    if (!player) return null;
+  const players = getAllPlayers();
+  const player = players.find((p) => p.slug === slug || p.id === slug);
+  if (!player) return null;
 
-    // Attach team object
-    let team: Team | undefined;
-    try {
-      const teams = await getTeams();
-      team = teams.find((t) => t.id === player.teamId);
-    } catch {
-      // team stays undefined
-    }
-
-    return { ...player, team: team ?? undefined };
-  } catch {
-    const player = mockPlayers.find((p) => p.slug === slug || p.id === slug);
-    if (!player) return null;
-    return { ...player };
-  }
+  // Attach team
+  const { getTeam } = await import('./teams');
+  const team = await getTeam(player.teamId);
+  return { ...player, team: team ?? undefined };
 }
 
 export const getPlayerById = getPlayer;
 
 export async function getFeaturedPlayers(): Promise<Player[]> {
-  try {
-    const players = await getAllPlayers();
-    return players.filter((p) => p.featured);
-  } catch {
-    return mockPlayers.filter((p) => p.featured);
-  }
+  return getAllPlayers().filter((p) => p.featured);
 }
 
 export async function getTrendingPlayers(): Promise<Player[]> {
-  try {
-    const players = await getAllPlayers();
-    return players.filter((p) => p.trending);
-  } catch {
-    return mockPlayers.filter((p) => p.trending);
-  }
+  return getAllPlayers().filter((p) => p.trending);
 }
 
 export async function getPlayersByTeam(teamId: string): Promise<Player[]> {
-  try {
-    const players = await getAllPlayers();
-    return players.filter((p) => p.teamId === teamId);
-  } catch {
-    return mockPlayers.filter((p) => p.teamId === teamId);
-  }
+  return getAllPlayers().filter((p) => p.teamId === teamId);
 }

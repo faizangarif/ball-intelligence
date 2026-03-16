@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 import { Target } from 'lucide-react';
 import type { ShotChartSummary } from '@/lib/types';

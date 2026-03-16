@@ -11,7 +11,7 @@ import { TeamSchedule } from '@/components/teams/team-schedule';
 import { TeamRoster } from '@/components/teams/team-roster';
 import { getStatLabel } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export const metadata = {
   title: 'Philadelphia Eagles | BALL INTELLIGENCE',

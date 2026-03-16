@@ -1,24 +1,26 @@
 import { fetchAllLiveScores } from '@/lib/services/espn';
-import { fetchTodaysNBAGames, fetchTodaysNFLGames } from '@/lib/services/web-data';
+import { getCached } from '@/lib/services/cache';
 import { mockGames } from '@/lib/data/mock/games';
 import { mockGameEvents } from '@/lib/data/mock/events';
 import type { Game, GameStatus, League } from '@/lib/types';
 
 async function getAllGames(): Promise<Game[]> {
+  // Try ESPN first — fast, real-time, no caching issues
   try {
-    // ESPN is primary source — real-time, fast, free
     const espn = await fetchAllLiveScores();
     if (espn.games.length > 0) return espn.games;
-
-    // Fall back to Claude web search
-    const [nba, nfl] = await Promise.all([fetchTodaysNBAGames(), fetchTodaysNFLGames()]);
-    const games = [...nba, ...nfl];
-    if (games.length > 0) return games;
-
-    return [...mockGames];
   } catch {
-    return [...mockGames];
+    // ESPN failed, try cache
   }
+
+  // Try cached Claude data
+  const cachedNBA = getCached<Game[]>('nba-games-today');
+  const cachedNFL = getCached<Game[]>('nfl-games-today');
+  if (cachedNBA || cachedNFL) {
+    return [...(cachedNBA || []), ...(cachedNFL || [])];
+  }
+
+  return [...mockGames];
 }
 
 export async function getGames(filters?: {
@@ -37,8 +39,8 @@ export async function getGame(id: string): Promise<Game | null> {
   const games = await getAllGames();
   const game = games.find((g) => g.id === id);
   if (game) {
-    const events = mockGameEvents[id] ?? [];
-    return { ...game, events: game.events?.length ? game.events : events };
+    const events = game.events?.length ? game.events : (mockGameEvents[id] ?? []);
+    return { ...game, events };
   }
   const mockGame = mockGames.find((g) => g.id === id);
   if (!mockGame) return null;
@@ -71,14 +73,13 @@ export async function getRecentGames(league?: League): Promise<Game[]> {
 export async function getFeaturedGame(): Promise<Game | null> {
   const allGames = await getAllGames();
 
-  // Priority: live Celtics/Eagles game > any live featured > any live > most recent final
   const liveFav = allGames.find(
-    (g) => g.status === 'LIVE' && (g.homeTeam.abbreviation === 'BOS' || g.awayTeam.abbreviation === 'BOS' || g.homeTeam.abbreviation === 'PHI' || g.awayTeam.abbreviation === 'PHI')
+    (g) =>
+      g.status === 'LIVE' &&
+      (g.homeTeam.abbreviation === 'BOS' || g.awayTeam.abbreviation === 'BOS' ||
+       g.homeTeam.abbreviation === 'PHI' || g.awayTeam.abbreviation === 'PHI')
   );
   if (liveFav) return liveFav;
-
-  const liveFeatured = allGames.find((g) => g.status === 'LIVE' && g.featured);
-  if (liveFeatured) return liveFeatured;
 
   const anyLive = allGames.find((g) => g.status === 'LIVE');
   if (anyLive) return anyLive;

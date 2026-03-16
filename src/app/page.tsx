@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 import { HeroSection } from '@/components/home/hero-section';
 import { LiveGamesStrip } from '@/components/home/live-games-strip';

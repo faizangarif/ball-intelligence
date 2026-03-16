@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 import { getNBALeaders, getNFLLeaders } from '@/lib/services/stats';
 import { getStatLabel } from '@/lib/utils';
