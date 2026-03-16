@@ -19,7 +19,7 @@ export function NFLStandingsTable({ teams }: StandingsTableProps) {
   const [conference, setConference] = useState('NFC');
 
   const filtered = teams
-    .filter((t) => t.conference === conference)
+    .filter((t) => t.conference.includes(conference))
     .sort((a, b) => {
       const totalA = a.wins + a.losses + (a.ties || 0);
       const totalB = b.wins + b.losses + (b.ties || 0);

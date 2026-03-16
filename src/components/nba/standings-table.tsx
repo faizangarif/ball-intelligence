@@ -19,7 +19,7 @@ export function NBAStandingsTable({ teams }: StandingsTableProps) {
   const [conference, setConference] = useState('Eastern');
 
   const filtered = teams
-    .filter((t) => t.conference === conference)
+    .filter((t) => t.conference.includes(conference))
     .sort((a, b) => {
       const pctA = a.wins / (a.wins + a.losses || 1);
       const pctB = b.wins / (b.wins + b.losses || 1);
