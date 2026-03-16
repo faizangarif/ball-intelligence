@@ -56,9 +56,14 @@ export default function AboutPage() {
             {/* Gradient glow */}
             <div className="absolute inset-0 bg-gradient-to-br from-accent/8 via-transparent to-emerald-500/5 pointer-events-none" />
             <div className="relative flex flex-col items-center gap-6 p-8 text-center md:flex-row md:text-left md:p-10">
-              {/* Avatar */}
-              <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-emerald-600 shadow-lg shadow-accent/20">
-                <User className="h-14 w-14 text-white" />
+              {/* Photo */}
+              <div className="relative h-32 w-32 md:h-36 md:w-36 shrink-0 rounded-full overflow-hidden ring-3 ring-accent/30 shadow-xl shadow-accent/10">
+                <img
+                  src="/images/ayaan.jpeg"
+                  alt="Ayaan G. Arif"
+                  className="h-full w-full object-cover object-top scale-[1.3] translate-y-[5%]"
+                />
+                <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />
               </div>
               <div>
                 <h2 className="mb-1 text-3xl font-black text-text md:text-4xl">
