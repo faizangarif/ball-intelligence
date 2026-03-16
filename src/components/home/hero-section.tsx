@@ -163,7 +163,7 @@ export function HeroSection({ featuredGame, liveGameCount }: HeroSectionProps) {
             transition={{ duration: 0.7, delay: 0.4, ease: 'easeOut' }}
             className="w-full max-w-md mt-4"
           >
-            <Link href={isLive ? `/live/${featuredGame.id}` : `/games/${featuredGame.id}`}>
+            <Link href={isLive ? `/live/${featuredGame.id}` : `/live/${featuredGame.id}`}>
               <div
                 className={cn(
                   'relative bg-surface/80 backdrop-blur-md border rounded-2xl p-6 transition-all hover:scale-[1.02] hover:border-accent/40',
