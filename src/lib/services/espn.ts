@@ -3,6 +3,8 @@ import type { Game, Team, GameEvent } from '@/lib/types';
 
 const NBA_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
 const NFL_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
+const NBA_STANDINGS = 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings';
+const NFL_STANDINGS = 'https://site.api.espn.com/apis/v2/sports/football/nfl/standings';
 
 // Team color map for teams ESPN returns
 const TEAM_COLORS: Record<string, { primary: string; secondary: string }> = {
@@ -205,4 +207,77 @@ export async function fetchAllLiveScores(): Promise<{
     final: games.filter((g) => g.status === 'FINAL'),
     scheduled: games.filter((g) => g.status === 'SCHEDULED'),
   };
+}
+
+// ============================================================
+// ESPN Standings — always current, updated daily
+// ============================================================
+function parseStandingsTeam(entry: any, conference: string, league: 'NBA' | 'NFL'): Team {
+  const team = entry.team || {};
+  const abbr = team.abbreviation || '';
+  const colors = league === 'NBA' ? TEAM_COLORS[abbr] : NFL_COLORS[abbr];
+
+  const stats: Record<string, any> = {};
+  for (const s of (entry.stats || [])) {
+    stats[s.name] = s.displayValue ?? s.value;
+  }
+
+  const wins = parseInt(stats.wins) || 0;
+  const losses = parseInt(stats.losses) || 0;
+  const ties = parseInt(stats.ties) || 0;
+  const name = team.displayName || team.name || '';
+
+  return {
+    id: abbr.toLowerCase(),
+    name,
+    slug: slugify(name),
+    abbreviation: abbr,
+    city: team.location || '',
+    league,
+    conference,
+    division: '',
+    primaryColor: colors?.primary || '#333',
+    secondaryColor: colors?.secondary || '#666',
+    wins,
+    losses,
+    ties: league === 'NFL' ? ties : undefined,
+    record: league === 'NFL' && ties > 0 ? `${wins}-${losses}-${ties}` : `${wins}-${losses}`,
+    featured: (league === 'NBA' && abbr === 'BOS') || (league === 'NFL' && abbr === 'PHI'),
+    standing: parseInt(stats.playoffSeed) || undefined,
+  };
+}
+
+export async function fetchESPNStandings(league: 'NBA' | 'NFL'): Promise<Team[]> {
+  const url = league === 'NBA' ? NBA_STANDINGS : NFL_STANDINGS;
+  try {
+    const res = await fetch(url, { next: { revalidate: 300 } }); // 5min cache
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    const teams: Team[] = [];
+    const conferences = data.children || [];
+    for (const conf of conferences) {
+      const confName = conf.name || conf.abbreviation || '';
+      // Some leagues have divisions nested under conferences
+      if (conf.children) {
+        for (const div of conf.children) {
+          const entries = div.standings?.entries || [];
+          for (const entry of entries) {
+            const team = parseStandingsTeam(entry, confName, league);
+            team.division = div.name || div.abbreviation || '';
+            teams.push(team);
+          }
+        }
+      }
+      const entries = conf.standings?.entries || [];
+      for (const entry of entries) {
+        teams.push(parseStandingsTeam(entry, confName, league));
+      }
+    }
+
+    return teams;
+  } catch (error) {
+    console.error(`[espn] Failed to fetch ${league} standings:`, error);
+    return [];
+  }
 }
