@@ -6,6 +6,7 @@ import { Footer } from '@/components/layout/footer';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { Providers } from './providers';
 import { DataRefresher } from '@/components/shared/data-refresher';
+import { VisitCounter } from '@/components/shared/visit-counter';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Footer />
           <MobileNav />
           <DataRefresher />
+          <VisitCounter />
         </Providers>
       </body>
     </html>
